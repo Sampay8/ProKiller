@@ -13,7 +13,6 @@ public class Player : MonoBehaviour
     [SerializeField] private Camera _camera;
 
     private EventBus _eventBus;
-    private LevelPresenter _presenter;
     private RaycastHit _hit;
 
     public void Init()

@@ -28,7 +28,6 @@ public class GUIButtons : MonoBehaviour
         _liders.onClick.AddListener(UseLiders);
         _settings.onClick.AddListener(UseSettings);
         _shop.onClick.AddListener(UseShop);
-        //_startScene.onClick.AddListener(UseStart);
     }
 
     private void OnDisable()
@@ -38,8 +37,6 @@ public class GUIButtons : MonoBehaviour
         _liders.onClick.RemoveAllListeners();
         _settings.onClick.RemoveAllListeners();
         _shop.onClick.RemoveAllListeners();
-        //_play.onClick.RemoveAllListeners();
-        //_startScene.onClick.RemoveAllListeners();
     }
 
     private void UsePausa()

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UI;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -28,7 +29,6 @@ public class GUILogic : MonoBehaviour
         _panels.Add(_mapPanel);
         _panels.Add(_lidersPanel);
         _panels.Add(_settingsPanel);
-        _panels.Add(_upgradePanel);
     }
 
     private void OnEnable()
@@ -58,8 +58,7 @@ public class GUILogic : MonoBehaviour
 
     private void ShowShop(ShopSignals signals)
     {
-        HidePanels();
-        _upgradePanel.gameObject.SetActive(true);
+        WindowManager.ShowWindow<ShopDialog>();
     }
 
     private void ShowSettings(SettingsSignal signal)
@@ -77,6 +76,7 @@ public class GUILogic : MonoBehaviour
     private void ShowMenu(GoToMenuSignal signal)
     {
         HidePanels();
+        _lidersPanel.gameObject.SetActive(true);
         _menuButtonsPanel.gameObject.SetActive(true);
     }
 

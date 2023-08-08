@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.InputSystem.iOS;
 
 [RequireComponent(typeof(Animator))]
 [RequireComponent(typeof(NavMeshAgent))]
@@ -47,24 +48,37 @@ public class Character : MonoBehaviour
         EventBus.Current.Subscribe<WeaponCompletteShoot>(StopFreze);
         EventBus.Current.Subscribe<LevelIsPlayedSignal>(OnPlay);
         EventBus.Current.Subscribe<LevelIsPausedSignal>(OnStop);
+        EventBus.Current.Subscribe<TimeStartSignal>(Begin);
     }
 
-    private void Start()
+    private void Begin(TimeStartSignal signal)
     {
         IsAlive = true;
-        IsMove = true;
+        Move();
         _movingRoutine = StartCoroutine(MovingCycle());
     }
 
-    private void OnPlay(LevelIsPlayedSignal signal)
+    public void GetDamage(Collision collision, Transform bulletTransform)
     {
-        Walk();
+        IsAlive = false;
+        _mover.enabled = false;
+        _agent.enabled = false;
+        _ragDoll.Death();
+        collision.transform.position += bulletTransform.forward * Time.deltaTime;
+        Killed?.Invoke();
     }
 
 
+    private void OnPlay(LevelIsPlayedSignal signal)
+    {
+        if (IsAlive)
+            MovmentFreezing?.Invoke(false);
+    }
+
     private void OnStop(LevelIsPausedSignal signal)
     {
-        Stand();
+        if (IsAlive)
+            MovmentFreezing?.Invoke(true);
     }
 
     private void StartFreze(WeaponOnShoot signal)
@@ -85,27 +99,9 @@ public class Character : MonoBehaviour
         EventBus.Current.Unsubscribe<WeaponCompletteShoot>(StopFreze);
         EventBus.Current.Unsubscribe<LevelIsPlayedSignal>(OnPlay);
         EventBus.Current.Unsubscribe<LevelIsPausedSignal>(OnStop);
+        EventBus.Current.Unsubscribe<TimeStartSignal>(Begin);
     }
 
-    private void Walk()
-    {
-        _agent.speed = 1;
-    }
-
-    private void Stand()
-    {
-        _agent.speed = 0;
-    }
-
-    public void GetDamage(Collision collision, Transform bulletTransform)
-    {
-        IsAlive = false;
-        _mover.enabled = false;
-        _agent.enabled = false;
-        _ragDoll.Death();
-        collision.transform.position += bulletTransform.forward * Time.deltaTime;
-        Killed?.Invoke();
-    }
 
     private IEnumerator MovingCycle()
     {
@@ -115,21 +111,49 @@ public class Character : MonoBehaviour
             {
                 if (_mover.GetDistanceToTarget() <= _minTargetDistance)
                 {
-                    IsMove = false;
-                    Standing?.Invoke();
-
+                    Stand();
                     yield return _delay;
-                    IsMove = true;
-                    Walking?.Invoke();
+                    Move();
                 }
             }
             yield return null;  
         }
         StopCoroutine(_movingRoutine);
     }
+
+    private void Move()
+    {
+        IsMove = true;
+        Walking?.Invoke();
+    }
+
+    private void Stand()
+    {
+        IsMove = false;
+        Standing?.Invoke();
+    }
 }
+
+
 public enum Motion
 {
     Idle,
     WalkFwdLoop
 }
+
+//public class CharacterSM
+//{ 
+//    public readonly CharacterSM SM;
+
+//    public CharacterSM(Character character, CharacterMover mover, CharacterAnimator animator)
+//    {
+//        SM = this;
+//    }
+
+
+//    public void Enter() { }
+//    public void Exit() { }
+//    public void Update() { }
+
+
+//}

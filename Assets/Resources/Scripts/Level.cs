@@ -48,7 +48,7 @@ public class Level : MonoBehaviour
             yield return null;
 
         onLoaded?.Invoke();
-        EventBus.Current.Invoke(new LevelIsPlayedSignal());
+        EventBus.Current.Invoke(new LevelIsLoadedSignal());
         EventBus.Current.Invoke(new HideCurtainSignal());
     }
 

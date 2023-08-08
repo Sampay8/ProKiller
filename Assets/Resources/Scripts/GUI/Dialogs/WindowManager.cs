@@ -13,6 +13,9 @@ namespace UI
         {
             {typeof(PausaDialog),"PausaDialog"},
             {typeof(LevelInfoDialog),"LevelInfoDialog"},
+            {typeof(BrifingDialog),"BrifingDialog"},
+            {typeof(ShopDialog),"ShopDialog"},
+
 
         };
 

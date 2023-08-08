@@ -1,6 +1,17 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 public class Window : MonoBehaviour
 {
-    protected void Hide() => Destroy(gameObject);
+    [SerializeField] private Button _outSideButton;
+
+    private void Start()
+    {
+        _outSideButton?.onClick.AddListener(Hide);
+    }
+    public void Hide()
+    { 
+        _outSideButton?.onClick.RemoveAllListeners();
+        Destroy(gameObject);
+    }
 }

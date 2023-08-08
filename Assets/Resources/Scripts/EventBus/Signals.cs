@@ -22,8 +22,11 @@ public class WeaponOnShoot { }
 public class WeaponCompletteShoot { }
 public class EscortBulletComlette { }
 
+public class LevelIsLoadedSignal { }
 public class LevelIsPausedSignal{}
 public class LevelIsPlayedSignal { }
+
+public class TimeStartSignal { }
 
 public class PreViewLevelSignal 
 {
