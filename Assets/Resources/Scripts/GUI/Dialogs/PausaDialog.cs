@@ -32,6 +32,8 @@ public class PausaDialog :  Window
     private void Continue()
     {
         EventBus.Current.Invoke(new LevelIsPlayedSignal());
+        EventBus.Current.Invoke(new HideMainMenuSignal());
+
         Hide();
     }
 

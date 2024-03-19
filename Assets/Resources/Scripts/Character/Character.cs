@@ -3,73 +3,75 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
-using UnityEngine.InputSystem.iOS;
+using CharacterFSM;
 
 [RequireComponent(typeof(Animator))]
 [RequireComponent(typeof(NavMeshAgent))]
 [RequireComponent(typeof(CharacterRagDoll))]
-[RequireComponent(typeof(CharacterMover))]
 
 public class Character : MonoBehaviour
 {
-    private const float _minTargetDistance = 1.0f;
+    public const string HeadName = "head";
+    
+    private const float _minTargetDistance = 0.8f;
 
-    public event Action Killed;
+    [SerializeField] private NavMeshAgent _navMeshAgent;
+    [SerializeField] private float _health = 100.0f;
+
+    public Transform _curTarget;
+
+
+    public event Action<Character> Killed;
     public event Action<bool> MovmentFreezing;
     public event Action<Motion> MotionChanged;
-    public event Action Walking;
-    public event Action Standing;
-
-    [SerializeField] private CharacterMover _mover;
-    [SerializeField] private CharacterRagDoll _ragDoll;
-
-
-    private Coroutine _movingRoutine;
-    private WaitForSecondsRealtime _delay = new WaitForSecondsRealtime(5.0f);
-    private NavMeshAgent _agent;
-    private CharacterAnimator _anim;
+    public event Action Scared;
+    
 
     public bool IsAlive { get; private set; }
     public bool IsMove { get; private set; }
 
-    private void Awake()
-    {
-        IsAlive = true;
-        _mover ??= transform.GetComponent<CharacterMover>();
-        _ragDoll ??= transform.GetComponent<CharacterRagDoll>();
-        _agent ??= transform.GetComponent<NavMeshAgent>();
-        _anim ??= new CharacterAnimator(this, gameObject.GetComponent<Animator>());
+    [SerializeField] private CharacterWayPoint _wayPoints;
+    private CharacterAnimator _anim;
+    private CharacterMover _mover;
+    private CharacterSM _sm;
+    private Motion motion;
 
-    }
+    #region Subscrible
 
     private void OnEnable()
     {
-        EventBus.Current.Subscribe<WeaponOnShoot>(StartFreze);
-        EventBus.Current.Subscribe<WeaponCompletteShoot>(StopFreze);
-        EventBus.Current.Subscribe<LevelIsPlayedSignal>(OnPlay);
-        EventBus.Current.Subscribe<LevelIsPausedSignal>(OnStop);
-        EventBus.Current.Subscribe<TimeStartSignal>(Begin);
+        EventBus.Current.Subscrible<OnShootSignal>(StartFreze);
+        EventBus.Current.Subscrible<FollowCompletteSignal>(StopFreze);
+        EventBus.Current.Subscrible<HideMainMenuSignal>(OnPlay);
+        EventBus.Current.Subscrible<LevelIsPausedSignal>(OnStop);
+        EventBus.Current.Subscrible<TimeStartSignal>(Begin);
     }
 
-    private void Begin(TimeStartSignal signal)
+    private void OnDisable()
     {
-        IsAlive = true;
-        Move();
-        _movingRoutine = StartCoroutine(MovingCycle());
+        EventBus.Current.Unsubscrible<OnShootSignal>(StartFreze);
+        EventBus.Current.Unsubscrible<FollowCompletteSignal>(StopFreze);
+        EventBus.Current.Unsubscrible<HideMainMenuSignal>(OnPlay);
+        EventBus.Current.Unsubscrible<LevelIsPausedSignal>(OnStop);
+        EventBus.Current.Unsubscrible<TimeStartSignal>(Begin);
     }
 
-    public void GetDamage(Collision collision, Transform bulletTransform)
+    #endregion
+
+    #region Subscribles
+    private void StartFreze(OnShootSignal signal)
     {
-        IsAlive = false;
-        _mover.enabled = false;
-        _agent.enabled = false;
-        _ragDoll.Death();
-        collision.transform.position += bulletTransform.forward * Time.deltaTime;
-        Killed?.Invoke();
+        if (IsAlive)
+            MovmentFreezing?.Invoke(true);
     }
 
+    private void StopFreze(FollowCompletteSignal signal)
+    {
+        if (IsAlive)
+            MovmentFreezing?.Invoke(false);
+    }
 
-    private void OnPlay(LevelIsPlayedSignal signal)
+    private void OnPlay(HideMainMenuSignal signal)
     {
         if (IsAlive)
             MovmentFreezing?.Invoke(false);
@@ -81,79 +83,110 @@ public class Character : MonoBehaviour
             MovmentFreezing?.Invoke(true);
     }
 
-    private void StartFreze(WeaponOnShoot signal)
+    private void Begin(TimeStartSignal signal)
     {
-        if (IsAlive)
-            MovmentFreezing?.Invoke(true);
+        Move();
+    }
+    #endregion
+
+    public void Init(CharacterWayPoint wayPoints, List<Vector3> spawnPos )
+    {
+        IsAlive = true;
+        _wayPoints = wayPoints;
+        transform.position = spawnPos[0];
+        _navMeshAgent = gameObject.GetComponent<NavMeshAgent>();
     }
 
-    private void StopFreze(WeaponCompletteShoot signal)
-    {
-        if (IsAlive)
-            MovmentFreezing?.Invoke(false);
-    }
+    public void ChangeMotion(Motion motion ) => MotionChanged?.Invoke(motion);
 
-    private void OnDisable()
+    public void GetDamage(Collider hit, Bullet bullet)
     {
-        EventBus.Current.Unsubscribe<WeaponOnShoot>(StartFreze);
-        EventBus.Current.Unsubscribe<WeaponCompletteShoot>(StopFreze);
-        EventBus.Current.Unsubscribe<LevelIsPlayedSignal>(OnPlay);
-        EventBus.Current.Unsubscribe<LevelIsPausedSignal>(OnStop);
-        EventBus.Current.Unsubscribe<TimeStartSignal>(Begin);
-    }
+        if (hit.transform.TryGetComponent<Rigidbody>(out Rigidbody rb))
+        { 
+            string shootPoint = rb.transform.name;
+            bool isHeadShot = shootPoint == HeadName;
 
-
-    private IEnumerator MovingCycle()
-    {
-        while (IsAlive)
-        {
-            if (IsMove == true)
-            {
-                if (_mover.GetDistanceToTarget() <= _minTargetDistance)
-                {
-                    Stand();
-                    yield return _delay;
-                    Move();
-                }
-            }
-            yield return null;  
+            if (isHeadShot)
+                ApplyDamage(value: _health);
+        
+            else
+                ApplyDamage(value: bullet.Damage);
+                
         }
-        StopCoroutine(_movingRoutine);
+
+        if (IsAlive == false)
+            Death(rb, bullet);
+            
+        else
+            Scared?.Invoke();
     }
 
-    private void Move()
+    private void ApplyDamage(float value)
+    {
+        _health = Mathf.Max(0, _health - value);
+        IsAlive = _health > 0;
+    }
+
+    private void Death(Rigidbody rb, Bullet bullet)
+    {
+        rb.transform.localPosition += bullet.transform.forward * Time.deltaTime;//не корректно, исправить
+        Killed?.Invoke(this);
+    }
+
+    private void Awake()
+    {
+        _wayPoints = FindObjectOfType<CharacterWayPoint>();
+        _anim = new CharacterAnimator(this, gameObject.GetComponent<Animator>());
+        _mover = new CharacterMover(this, gameObject.GetComponent<NavMeshAgent>());
+        _sm = new CharacterSM(this, _anim, _mover);
+    }
+
+    private void FixedUpdate() 
+    {
+        if(_curTarget != null)
+            _navMeshAgent.destination = _curTarget.position;
+
+        _sm.Update();
+    
+    }
+    
+    private void Move() 
     {
         IsMove = true;
-        Walking?.Invoke();
+        Debug.LogError("character  MOve");
     }
 
-    private void Stand()
+    private void Stand() =>  IsMove = false; 
+
+    internal Vector3 GetWay()
     {
-        IsMove = false;
-        Standing?.Invoke();
+        return _wayPoints.GetNewPointToMove();
     }
-}
 
+    //private void Update()
+    //{
+    //    if(Input.anyKey)
+    //    {
+    //        if (Input.GetKeyDown(KeyCode.T))
+    //            motion = Motion.Idle;
+    //        if (Input.GetKeyDown(KeyCode.W))
+    //            motion = Motion.WalkFwdLoop;
+    //        if (Input.GetKeyDown(KeyCode.E))
+    //            motion = Motion.Scared;
+    //        if (Input.GetKeyDown(KeyCode.R))
+    //            motion = Motion.RunFwdLoop;
+
+    //        MotionChanged(motion);
+    //        Debug.ClearDeveloperConsole();
+    //        Debug.LogError(motion.ToString());
+    //    }
+    //}
+}
 
 public enum Motion
 {
     Idle,
-    WalkFwdLoop
+    WalkFwdLoop,
+    RunFwdLoop,
+    Scared
 }
-
-//public class CharacterSM
-//{ 
-//    public readonly CharacterSM SM;
-
-//    public CharacterSM(Character character, CharacterMover mover, CharacterAnimator animator)
-//    {
-//        SM = this;
-//    }
-
-
-//    public void Enter() { }
-//    public void Exit() { }
-//    public void Update() { }
-
-
-//}

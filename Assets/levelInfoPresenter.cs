@@ -15,7 +15,7 @@ public class levelInfoPresenter : MonoBehaviour
     private void Start()
     {
         _eventBus = EventBus.Current;
-        _eventBus.Subscribe<PreViewLevelSignal>(Present);
+        _eventBus.Subscrible<PreViewLevelSignal>(Present);
         image = _infoPresenter.GetComponentInChildren<Image>();
         _loadButton = _infoPresenter.GetComponentInChildren<Button>();
     }

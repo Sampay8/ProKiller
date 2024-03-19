@@ -14,7 +14,7 @@ public class EventBus
             Current = this;
     }
 
-    public void Subscribe<T>(Action<T> callBack, byte priority = 1)
+    public void Subscrible<T>(Action<T> callBack, byte priority = 1)
     {
         string key = typeof(T).Name;
         if (_signals.ContainsKey(key))
@@ -25,7 +25,7 @@ public class EventBus
         _signals[key] = _signals[key].OrderByDescending(x => x.Priority).ToList();
     }
 
-    public void Unsubscribe<T>(Action<T> callBack)
+    public void Unsubscrible<T>(Action<T> callBack)
     {
         string key = typeof(T).Name;
         if (_signals.ContainsKey(key))

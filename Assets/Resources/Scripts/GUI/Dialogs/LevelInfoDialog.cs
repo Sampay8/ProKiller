@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+
 public class LevelInfoDialog : Window
 {
     [SerializeField]  private EventBus _eventBus;
@@ -11,7 +12,7 @@ public class LevelInfoDialog : Window
 
     private void Awake()
     {
-        EventBus.Current.Subscribe<PreViewLevelSignal>(OnPresentLoad);
+        EventBus.Current.Subscrible<PreViewLevelSignal>(OnPresentLoad);
     }
     private void OnPresentLoad(PreViewLevelSignal signal)
     {
@@ -25,4 +26,10 @@ public class LevelInfoDialog : Window
         _startButton.onClick.AddListener(level.Load);
         _startButton.onClick.AddListener(Hide);
     }
+
+    private void OnDestroy()
+    {
+        EventBus.Current.Unsubscrible<PreViewLevelSignal>(OnPresentLoad);
+    }
+
 }

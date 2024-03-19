@@ -14,4 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _id: 1
   _weaponZoom: 20
-  _aimShake: 3
+  _aimShake: 0.1
+  _template: {fileID: 8813425801258603645, guid: 6dbd0d3d42e5c1e49bc9a9070d96d6bf,
+    type: 3}

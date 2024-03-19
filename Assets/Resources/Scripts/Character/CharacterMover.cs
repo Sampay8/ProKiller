@@ -6,77 +6,50 @@ using UnityEngine.AI;
 
 [RequireComponent(typeof(NavMeshAgent))]
 
-public class CharacterMover : MonoBehaviour
+public class CharacterMover
 {
     private const float _minSpeed =.01f;
-    private const float _maxSpeed =1.0f;
+    private const float _defoultSpeed =1.0f;
 
-    [SerializeField] private Character _character;
-    [SerializeField]private NavMeshAgent _agent;
-    [SerializeField] private WayPoint _wayPoints;
+    private Character _character;
+    private NavMeshAgent _agent;
 
-    private Transform _curTarget;
-    private Transform _newTarget;
-
-    public float GetDistanceToTarget()
+    public CharacterMover(Character character, NavMeshAgent agent)
     {
-        return Vector3.Distance(transform.position, _curTarget.position);
-    }
-
-    private void Awake()
-    {
-        _agent??= gameObject.GetComponent<NavMeshAgent>();
-        _character ??= transform.GetComponent<Character>();
-        _wayPoints ??= FindObjectOfType<WayPoint>();
-        StartCoroutine(GetNewPoinToWai());
-    }
-
-    private void OnEnable()
-    {
+        _character = character;
+        _agent = agent;
+        _character.Killed += Disable;
+        _character.MotionChanged += ChangeMovment;
         _character.MovmentFreezing += FreezeMoving;
-        _character.Walking += FindWaiPoint;
-        _character.MotionChanged += ChangeSpeed;
+
     }
-        
-    private void FindWaiPoint() =>
-        StartCoroutine(GetNewPoinToWai());
+
+    private void Disable(Character obj)
+    {
+        _agent.enabled = false;
+    }
+
+    private void ChangeMovment(Motion motion)
+    {
+        switch (motion)
+        {
+            case Motion.Idle:
+                _agent.speed = 0;
+                break;
+            case Motion.WalkFwdLoop:
+                _agent.speed = _defoultSpeed;
+                break;
+        }
+    }
+
+    public void SetMoveTarget(Vector3 newTarget) => _agent.destination = newTarget;
+
 
     private void FreezeMoving(bool value)
     {
         if (value)
             _agent.speed = _minSpeed;
         else
-            _agent.speed = _maxSpeed;
-    }
-
-    private void ChangeSpeed(Motion motion)
-    {
-        switch (motion)
-        {
-            case Motion.Idle:
-                _agent.speed = _minSpeed;
-                break;
-            case Motion.WalkFwdLoop:
-                _agent.speed = _maxSpeed;
-                break;
-        }
-    }
-
-        private void OnDisable()
-    {
-        _character.MovmentFreezing -= FreezeMoving;
-        _character.Walking -= FindWaiPoint;
-        _character.MotionChanged -= ChangeSpeed;
-    }
-
-    private IEnumerator GetNewPoinToWai()
-    {
-        do
-            _newTarget = _wayPoints.GetNewPointToMove();
-        while (_curTarget == _newTarget);
-        
-        _curTarget = _newTarget;
-        _agent.SetDestination(_curTarget.position);
-        yield return null;
+            _agent.speed = _defoultSpeed;
     }
 }

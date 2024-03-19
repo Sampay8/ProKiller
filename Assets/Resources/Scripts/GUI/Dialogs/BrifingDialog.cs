@@ -7,41 +7,27 @@ using UnityEngine.UI;
 
 public class BrifingDialog : Window
 {
-    [SerializeField] private Button _menuButton;
+    public event Action BrifingCompleted;
+
     [SerializeField] private Button _startButton;
-    [SerializeField] private Button _shopButton;
     [SerializeField] private ScrollRect _targrtsPresenter;
 
     private void Start()
     {
-        _menuButton.onClick.AddListener(OnMenu);
         _startButton.onClick.AddListener(Play);
-        _shopButton.onClick.AddListener(OnShop);
     }
 
     private new void Hide()
     {
-        _menuButton.onClick.RemoveAllListeners();
         _startButton.onClick.RemoveAllListeners();
-        _shopButton.onClick.RemoveAllListeners();
         base.Hide();
-    }
-
-    private void OnShop()
-    {
-        //?
-        WindowManager.ShowWindow<ShopDialog>();
     }
 
     private void Play()
     {
-        EventBus.Current.Invoke(new LevelIsPlayedSignal());
-        Hide();
-    }
+        BrifingCompleted?.Invoke();
+        EventBus.Current.Invoke(new BrifingIsFinishSignal());
 
-    private void OnMenu()
-    {
-        EventBus.Current.Invoke(new GoToMenuSignal());
         Hide();
     }
 }

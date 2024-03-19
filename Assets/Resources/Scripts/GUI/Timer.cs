@@ -6,62 +6,134 @@ using TMPro;
 
 public class Timer : MonoBehaviour
 {
-    public event Action TimerLaunched;
+    public static event Action FixUpdated;
+
     public event Action Ticked;
+    public event Action TimerLaunched;
+    public event Action TimeIsOver;
 
-    private const byte _timeToStart = 10;
-    private const byte _timeValue = 30;
+    private const byte _prepareTime = 3;
+    private const byte _playTime = 10;
 
-    [SerializeField] private GameObject _uiPanel;
+    [SerializeField] private GameObject _timePanel;
     [SerializeField] private TMP_Text  _timeValueText;
 
     private Coroutine _timerRoutine;
     private WaitForSecondsRealtime _delay = new WaitForSecondsRealtime(1.0f);
-
+    private TimePresenter _timePresenter;
+    private bool _isPlaying;
+    private bool _isUsed;
     public byte CurTimeValue { get; private set; }
-    
-    private void OnEnable()
-    {
-        CurTimeValue = _timeToStart;
 
-        EventBus.Current.Subscribe<TimeStartSignal>(Lauch);
+    #region Subscribles
+
+    //private void OnEnable()
+    //{
+    //    EventBus.Current.Subscrible<BrifingIsFinishSignal>(Lauch);
+    //    EventBus.Current.Subscrible<LevelIsPausedSignal>(Hide);
+    //    EventBus.Current.Subscrible<LevelIsPlayedSignal>(Show);
+    //    EventBus.Current.Subscrible<OnShootSignal>(PauseTime);
+    //    EventBus.Current.Subscrible<FollowCompletteSignal>(PlayTime);
+
+    //}
+
+    //private void OnDestroy()
+    //{
+    //    EventBus.Current.Unsubscrible<BrifingIsFinishSignal>(Lauch);
+    //    EventBus.Current.Unsubscrible<LevelIsPlayedSignal>(Show);
+    //    EventBus.Current.Unsubscrible<LevelIsPausedSignal>(Hide);
+    //    EventBus.Current.Unsubscrible<OnShootSignal>(PauseTime);
+    //    EventBus.Current.Unsubscrible<FollowCompletteSignal>(PlayTime);
+
+    //}
+    #endregion
+
+    private void PauseTime(OnShootSignal signal)
+    {
+        _isPlaying = false;
+    }
+
+    private void PlayTime(FollowCompletteSignal signal)
+    {
+        _isPlaying = true;
+    }
+
+    private void Show(LevelIsPlayedSignal signal)
+    {
+        _isPlaying = true;
+        _timePanel.SetActive(_isPlaying);
+    }
+
+    private void Hide(LevelIsPausedSignal signal)
+    {
+        _isPlaying = false;
+        _timePanel.SetActive(_isPlaying);
     }
 
     private void Start()
     {
-        TimePresenter timePresenter = new TimePresenter(this, _timeValueText);
-        _timerRoutine = StartCoroutine(Ticker());//
+        _timePanel.SetActive(false);
     }
 
-    private void Lauch(TimeStartSignal signal)
+    private void FixedUpdate() => FixUpdated?.Invoke();
+
+    private void Lauch(BrifingIsFinishSignal signal)
     {
+        _isUsed = true;
+        _isPlaying = true;
+        CurTimeValue = _prepareTime;
+        _timePresenter ??= new TimePresenter(this, _timeValueText);
+        _timePanel.SetActive(true);
+
+        if (_timerRoutine != null)
+            StopCoroutine(_timerRoutine);
         _timerRoutine = StartCoroutine(Ticker());
     }
 
-    private void OnDestroy()
+    
+
+    private void ChekTime(ref bool prepareTime,ref bool playTime) 
     {
-        EventBus.Current.Unsubscribe<TimeStartSignal>(Lauch);
+        if (prepareTime)
+        {
+            prepareTime = CurTimeValue > 0;
+            if (prepareTime == false)
+            { 
+                playTime = true;
+                TimerLaunched?.Invoke();
+                CurTimeValue = _playTime;
+                EventBus.Current.Invoke(new TimeStartSignal());
+            }
+        }
+
+        if (playTime)
+        {
+            playTime = CurTimeValue > 0;
+            if (playTime == false)
+                _isUsed = false;            
+        }
     }
 
     private IEnumerator Ticker()
     {
-        while (CurTimeValue > 0)
-        {
-            yield return _delay;
-            CurTimeValue -= 1;
-            Ticked?.Invoke();
-        }
-        CurTimeValue = _timeValue;
-        TimerLaunched?.Invoke();
+        bool prepareTime = true;
+        bool playTime = false;
 
-        while (CurTimeValue > 0)
-        {
-            yield return _delay;
-            CurTimeValue -= 1;
-            Ticked?.Invoke();
-        }
+        CurTimeValue = _prepareTime;
+        Ticked.Invoke();
+        yield return _delay;
 
-        yield return null;
+        while (_isUsed)
+        {
+            if (_isPlaying && CurTimeValue >0)
+            {
+                CurTimeValue -= 1;
+                Ticked.Invoke();
+            }
+                yield return _delay;
+            ChekTime(ref prepareTime,ref playTime);
+        }
+        TimeIsOver?.Invoke();
     }
 }
 
@@ -80,7 +152,7 @@ public class TimePresenter
     private void UpdateText()
     {
         string str = _timer.CurTimeValue.ToString();
-        if (_timer.CurTimeValue >= 10)
+        if (str.Length > 1)
             _text.text = str;
         else
             _text.text = "0" + str;

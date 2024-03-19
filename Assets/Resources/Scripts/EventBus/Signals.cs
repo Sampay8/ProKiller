@@ -1,32 +1,28 @@
 #region MenuSignals
-
 using UnityEngine;
 
-public class MapSignal { }
-public class ReitingsSignal { }
-public class SettingsSignal { }
-public class ShopSignals { }
+public interface ISignal { }
+
+
+public class ShowMapSignal { }
+public class ShowReitingsSignal { }
+public class ShowSettingsSignal { }
+public class ShowShopSignals { }
 public class GoToMenuSignal { }
 #endregion
 
 
-public class WeaponIsReadySignal 
-{
-    public readonly bool State;
-    public WeaponIsReadySignal(bool value = false)
-    { 
-        State = value;
-    }
-}
-public class WeaponOnShoot { }
-public class WeaponCompletteShoot { }
-public class EscortBulletComlette { }
 
-public class LevelIsLoadedSignal { }
-public class LevelIsPausedSignal{}
-public class LevelIsPlayedSignal { }
+public class OnShootSignal : ISignal { }
+public class FollowCompletteSignal : ISignal { }
+public class LevelIsLoadedSignal : ISignal { }
+public class LevelIsPausedSignal : ISignal { }
+public class LevelIsPlayedSignal: ISignal{ }
 
-public class TimeStartSignal { }
+public class TimeStartSignal : ISignal { }
+
+public class HideMainMenuSignal : ISignal { }
+public class BrifingIsFinishSignal { }
 
 public class PreViewLevelSignal 
 {
